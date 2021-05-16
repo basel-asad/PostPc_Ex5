@@ -2,68 +2,184 @@ package exercise.android.reemh.todo_items;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-
+  private TextView tv;
+  private RecyclerView rv;
   public TodoItemsHolder holder = null;
+  public MyAdapter adapter = null;
+  // for saving when app closes
+  private SharedPreferences mPrefs;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
+    mPrefs = this.getSharedPreferences("saved_text", MODE_PRIVATE);
+
+    // getting UI elements
+    FloatingActionButton btn = findViewById(R.id.buttonCreateTodoItem);
+    tv = findViewById(R.id.editTextInsertTask);
+    rv = findViewById(R.id.recyclerTodoItemsList);
+
     if (holder == null) {
       holder = new TodoItemsHolderImpl();
     }
 
-    // TODO: implement the specs as defined below
-    //    (find all UI components, hook them up, connect everything you need)
+    btn.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View v) {
+        String task_description = tv.getText().toString();
+        if(!task_description.isEmpty()){
+          holder.addNewInProgressItem(task_description);
+          tv.setText("");
+          adapter.notifyDataSetChanged();
+//          Toast.makeText(MainActivity.this, " " +adapter.getItemCount() ,Toast.LENGTH_LONG).show();
+        }
+      }
+    });
+
+    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
+    rv.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+    rv.setItemAnimator(new DefaultItemAnimator());
+    rv.setAdapter(adapter);
+  }
+
+  @Override
+  protected void onSaveInstanceState(@NonNull Bundle outState) {
+    outState.putString("input_string", tv.getText().toString());
+    outState.putSerializable("list_of_items", (Serializable) holder.getCurrentItems());
+    super.onSaveInstanceState(outState);
+
+  }
+
+  @Override
+  protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+    super.onRestoreInstanceState(savedInstanceState);
+
+    tv.setText(savedInstanceState.getString("input_string"));
+    // redefine holder (with the old list as input), set it to adapter
+    holder = new TodoItemsHolderImpl((List<TodoItem>) savedInstanceState.getSerializable("list_of_items"));
+    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
+    rv.setAdapter(adapter);
+  }
+
+  @Override
+  protected void onPause() {
+    super.onPause();
+
+    SharedPreferences.Editor ed = mPrefs.edit();
+    ed.putString("input_string", tv.getText().toString());
+    witeObjectToFile(MainActivity.this, holder.getCurrentItems(),"list_saved");
+    // save the list
+    ed.apply();
+  }
+
+  @Override
+  protected void onResume() {
+    super.onResume();
+
+    mPrefs = this.getPreferences(Context.MODE_PRIVATE);
+    String text = mPrefs.getString("input_string", "");
+    tv.setText(text);
+    // get the list
+    ArrayList<TodoItem> items_loaded = (ArrayList<TodoItem>) readObjectFromFile(MainActivity.this,"list_saved" );
+    // redefine holder (with the old list as input), set it to adapter
+    holder = new TodoItemsHolderImpl(items_loaded);
+    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
+    rv.setAdapter(adapter);
+  }
+
+
+  /**
+   *
+   * @param context
+   * @param object
+   * @param filename
+   */
+  public static void witeObjectToFile(Context context, Object object, String filename) {
+
+    ObjectOutputStream objectOut = null;
+    try {
+
+      FileOutputStream fileOut = context.openFileOutput(filename, Activity.MODE_PRIVATE);
+      objectOut = new ObjectOutputStream(fileOut);
+      objectOut.writeObject(object);
+      fileOut.getFD().sync();
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    } finally {
+      if (objectOut != null) {
+        try {
+          objectOut.close();
+        } catch (IOException e) {
+          // do nowt
+        }
+      }
+    }
+  }
+
+
+  /**
+   *
+   * @param context
+   * @param filename
+   * @return
+   */
+  public static Object readObjectFromFile(Context context, String filename) {
+
+    ObjectInputStream objectIn = null;
+    Object object = null;
+    try {
+
+      FileInputStream fileIn = context.getApplicationContext().openFileInput(filename);
+      objectIn = new ObjectInputStream(fileIn);
+      object = objectIn.readObject();
+
+    } catch (FileNotFoundException e) {
+      // Do nothing
+    } catch (IOException | ClassNotFoundException e) {
+      e.printStackTrace();
+    } finally {
+      if (objectIn != null) {
+        try {
+          objectIn.close();
+        } catch (IOException e) {
+          // do nowt
+        }
+      }
+    }
+
+    return object;
   }
 }
-
-/*
-
-SPECS:
-
-- the screen starts out empty (no items shown, edit-text input should be empty)
-- every time the user taps the "add TODO item" button:
-    * if the edit-text is empty (no input), nothing happens
-    * if there is input:
-        - a new TodoItem (checkbox not checked) will be created and added to the items list
-        - the new TodoItem will be shown as the first item in the Recycler view
-        - the edit-text input will be erased
-- the "TodoItems" list is shown in the screen
-  * every operation that creates/edits/deletes a TodoItem should immediately be shown in the UI
-  * the order of the TodoItems in the UI is:
-    - all IN-PROGRESS items are shown first. items are sorted by creation time,
-      where the last-created item is the first item in the list
-    - all DONE items are shown afterwards, no particular sort is needed (but try to think about what's the best UX for the user)
-  * every item shows a checkbox and a description. you can decide to show other data as well (creation time, etc)
-  * DONE items should show the checkbox as checked, and the description with a strike-through text
-  * IN-PROGRESS items should show the checkbox as not checked, and the description text normal
-  * upon click on the checkbox, flip the TodoItem's state (if was DONE will be IN-PROGRESS, and vice versa)
-  * add a functionality to remove a TodoItem. either by a button, long-click or any other UX as you want
-- when a screen rotation happens (user flips the screen):
-  * the UI should still show the same list of TodoItems
-  * the edit-text should store the same user-input (don't erase input upon screen change)
-
-Remarks:
-- you should use the `holder` field of the activity
-- you will need to create a class extending from RecyclerView.Adapter and use it in this activity
-- notice that you have the "row_todo_item.xml" file and you can use it in the adapter
-- you should add tests to make sure your activity works as expected. take a look at file `MainActivityTest.java`
-
-
-
-(optional, for advanced students:
-- save the TodoItems list to file, so the list will still be in the same state even when app is killed and re-launched
-)
-
-*/

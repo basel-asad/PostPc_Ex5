@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TodoItems</string>
+    <string name="description">Description</string>
+    <string name="status">status</string>
 </resources>
