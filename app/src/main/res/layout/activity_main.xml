@@ -7,6 +7,18 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <Space
+        android:id="@+id/separator"
+        android:layout_width="416dp"
+        android:layout_height="45dp"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintBottom_toTopOf="@+id/editTextInsertTask"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/recyclerTodoItemsList"
+        app:layout_constraintVertical_bias="1.0" />
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/buttonCreateTodoItem"
         android:layout_width="wrap_content"
@@ -38,21 +50,16 @@
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerTodoItemsList"
-        android:layout_width="410dp"
+        android:layout_width="0dp"
         android:layout_height="600dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.0" />
+        app:layout_constraintVertical_bias="0.0">
 
-    <!--TODO:
-         There is a UI bug.
-         the constraints of the recycler are broken:
-         if there is too much content in the recycler, the content will
-         show up below the edit-text and the button.
-         to reproduce this bug: add many todo-items to the list
-         you need to fix this UI bug!-->
+    </androidx.recyclerview.widget.RecyclerView>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
