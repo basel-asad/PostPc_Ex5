@@ -1,0 +1,20 @@
+We didn't define any UX flow to let users edit a descrption on an existing TODO item.
+Which UX flow will you define?
+In your response notice the following:
+1. how easy is it for users to figure out this flow in their first usage? (for example, a glowing button is more discoverable then a swipe-left gesture)
+2. how hard to implement will your solution be?
+3. how consistent is this flow with regular "edit" flows in the Android world?
+-----------------------------
+I would have chosen that a simple tao in any item in the list wouldve oppened up a new window, in
+that window the user would have more space to edit the text in the item freely, and more easily.
+
+1. in my opinion this UX flow is the most trivial and its very easy to figure out, maybe adding
+    a bit of makeup to our TextView (item) would make it appear more clickable, hence helping the user to
+    figure it out.
+
+2. shouldn't be hard at all, finding a background color for the items should be very easy via any
+    search engine.
+    opening the extra window would take a bit more effort, but also shouldnt be so difficult,
+    using broadcast to move data from and to the new activity should be an easy and fun challenge.
+
+3. very consistent, this is how all the to-do apps do it, and it makes sense, sometimes less is more.
