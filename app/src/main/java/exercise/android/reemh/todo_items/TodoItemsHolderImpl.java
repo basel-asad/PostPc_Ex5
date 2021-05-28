@@ -1,5 +1,4 @@
 package exercise.android.reemh.todo_items;
-import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,27 +30,52 @@ public class TodoItemsHolderImpl implements TodoItemsHolder {
   public List<TodoItem> getCurrentItems() { return items; }
 
   @Override
-  public void addNewInProgressItem(String description) {
-    this.items.add(0, new TodoItem(description, TodoItem.IN_PROGRESS));
+  public TodoItem addNewInProgressItem(String description) {
+    TodoItem item = new TodoItem(description, TodoItem.IN_PROGRESS);
+    this.items.add(0, item);
     sort_items();
+    return item;
   }
 
   @Override
-  public void addNewInProgressItem(String description, Date creation_date) {
-    this.items.add(0, new TodoItem(description, TodoItem.IN_PROGRESS, creation_date));
+  public TodoItem addNewInProgressItem(String description, Date creation_date) {
+    TodoItem item = new TodoItem(description, TodoItem.IN_PROGRESS, creation_date);
+    // last modified is set the same as creation date
+    this.items.add(0, item);
     sort_items();
+    return item;
   }
 
   @Override
-  public void addNewDoneItem(String description) {
-    this.items.add(new TodoItem(description, TodoItem.DONE));
+  public TodoItem addNewInProgressItem(String description, Date creation_date, Date last_modified) {
+    TodoItem item =new TodoItem(description, TodoItem.IN_PROGRESS, creation_date, last_modified);
+    this.items.add(0, item);
     sort_items();
+    return item;
   }
 
   @Override
-  public void addNewDoneItem(String description, Date creation_date) {
-    this.items.add(new TodoItem(description, TodoItem.DONE, creation_date));
+  public TodoItem addNewDoneItem(String description) {
+    TodoItem item =new TodoItem(description, TodoItem.DONE);
+    this.items.add(item);
     sort_items();
+    return item;
+  }
+
+  @Override
+  public TodoItem addNewDoneItem(String description, Date creation_date) {
+    TodoItem item = new TodoItem(description, TodoItem.DONE, creation_date);
+    this.items.add(item);
+    sort_items();
+    return item;
+  }
+
+  @Override
+  public TodoItem addNewDoneItem(String description, Date creation_date, Date last_modified) {
+    TodoItem item = new TodoItem(description, TodoItem.DONE, creation_date, last_modified);
+    this.items.add(item);
+    sort_items();
+    return item;
   }
 
   public void sort_items(){
@@ -74,28 +98,40 @@ public class TodoItemsHolderImpl implements TodoItemsHolder {
   }
 
   @Override
-  public void markItemDone(TodoItem item) {
+  public TodoItem markItemDone(TodoItem item) {
     //check if item is inside list?
     if(this.items.contains(item)) {
       this.deleteItem(item); // delete item1
       //******   re-add item as checked ( this ensures order)
-      this.addNewDoneItem(item.description, item.creation_TimeStamp);
+      item = this.addNewDoneItem(item.description, item.creation_TimeStamp, new Date());
     }
+    return item;
   }
 
   @Override
-  public void markItemInProgress(TodoItem item) {
+  public TodoItem markItemInProgress(TodoItem item) {
     //check if item is inside list?
     if(this.items.contains(item)) {
       this.deleteItem(item); // delete item1
       //******   re-add item as InProgress ( this ensures order)
-      this.addNewInProgressItem(item.description, item.creation_TimeStamp);
+      item = this.addNewInProgressItem(item.description, item.creation_TimeStamp, new Date());
     }
+    return item;
   }
 
   @Override
   public void deleteItem(TodoItem item) {
     this.items.remove(item); // returns true if item found and removed, false otherwise
+  }
+
+  @Override
+  public void setText(TodoItem item, String new_text) {
+    //check if item is inside list?
+    if(this.items.contains(item)) {
+      item.description = new_text;
+      item.last_modified = new Date();
+
+    }
   }
 
 }

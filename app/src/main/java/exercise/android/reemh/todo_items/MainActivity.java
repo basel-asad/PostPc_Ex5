@@ -7,7 +7,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -31,11 +34,14 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
+import static exercise.android.reemh.todo_items.TaskStore_Application.readObjectFromFile;
+
 public class MainActivity extends AppCompatActivity {
   private TextView tv;
   private RecyclerView rv;
-  public TodoItemsHolder holder = null;
+  TaskStore_Application tasks_app;
   public MyAdapter adapter = null;
+  BroadcastReceiver broadcastReceiverForchange;
   // for saving when app closes
   private SharedPreferences mPrefs;
 
@@ -44,142 +50,104 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    mPrefs = this.getSharedPreferences("saved_text", MODE_PRIVATE);
+    tasks_app = ((TaskStore_Application) getApplicationContext());
+//    mPrefs = this.getSharedPreferences("saved_text", MODE_PRIVATE);
+    mPrefs = tasks_app.mprefs;
 
     // getting UI elements
     FloatingActionButton btn = findViewById(R.id.buttonCreateTodoItem);
     tv = findViewById(R.id.editTextInsertTask);
     rv = findViewById(R.id.recyclerTodoItemsList);
 
-    if (holder == null) {
-      holder = new TodoItemsHolderImpl();
-    }
+//    if (holder == null) {
+//      holder = new TodoItemsHolderImpl();
+//    }
 
     btn.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View v) {
         String task_description = tv.getText().toString();
         if(!task_description.isEmpty()){
-          holder.addNewInProgressItem(task_description);
+          tasks_app.tasks_info().addNewInProgressItem(task_description);
           tv.setText("");
-          adapter.notifyDataSetChanged();
-//          Toast.makeText(MainActivity.this, " " +adapter.getItemCount() ,Toast.LENGTH_LONG).show();
+          adapter.notify_adapter_data_changed();
         }
       }
     });
 
-    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
-    rv.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-    rv.setItemAnimator(new DefaultItemAnimator());
-    rv.setAdapter(adapter);
+    // register a broadcast-receiver to handle action "found_roots"
+    broadcastReceiverForchange = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent incomingIntent) {
+        if (incomingIntent == null || !incomingIntent.getAction().equals("db_changed"))
+          return;
+        // db changed, refresh UI
+        adapter.notify_adapter_data_changed();
+        //save all the data to phone
+        tasks_app.save_all(tv.getText().toString());
+
+      }
+    };
+    this.registerReceiver(broadcastReceiverForchange, new IntentFilter("db_changed"));
+
+    // set-up the adapter
+    if(adapter == null) {
+      adapter = new MyAdapter(this.getApplicationContext() ,rv, (TodoItemsHolder) new TodoItemsHolderImpl());
+      rv.setItemAnimator(new DefaultItemAnimator());
+      rv.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
+      rv.setAdapter(adapter);
+    }
+
   }
 
   @Override
   protected void onSaveInstanceState(@NonNull Bundle outState) {
-    outState.putString("input_string", tv.getText().toString());
-    outState.putSerializable("list_of_items", (Serializable) holder.getCurrentItems());
     super.onSaveInstanceState(outState);
 
+    tasks_app.save_all(tv.getText().toString());
   }
 
   @Override
   protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
     super.onRestoreInstanceState(savedInstanceState);
 
-    tv.setText(savedInstanceState.getString("input_string"));
-    // redefine holder (with the old list as input), set it to adapter
-    holder = new TodoItemsHolderImpl((List<TodoItem>) savedInstanceState.getSerializable("list_of_items"));
-    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
-    rv.setAdapter(adapter);
+    load_all();
+
   }
 
   @Override
   protected void onPause() {
     super.onPause();
-
-    SharedPreferences.Editor ed = mPrefs.edit();
-    ed.putString("input_string", tv.getText().toString());
-    witeObjectToFile(MainActivity.this, holder.getCurrentItems(),"list_saved");
-    // save the list
-    ed.apply();
+    tasks_app.save_all(tv.getText().toString());
   }
+
+
 
   @Override
   protected void onResume() {
     super.onResume();
+    load_all();
+  }
 
-    mPrefs = this.getPreferences(Context.MODE_PRIVATE);
+  private void load_all(){
+//    mPrefs = this.getPreferences(Context.MODE_PRIVATE);
+    mPrefs = tasks_app.mprefs;
     String text = mPrefs.getString("input_string", "");
     tv.setText(text);
     // get the list
     ArrayList<TodoItem> items_loaded = (ArrayList<TodoItem>) readObjectFromFile(MainActivity.this,"list_saved" );
     // redefine holder (with the old list as input), set it to adapter
-    holder = new TodoItemsHolderImpl(items_loaded);
-    adapter = new MyAdapter(rv, (TodoItemsHolder)holder);
+    TodoItemsHolder temp = new TodoItemsHolderImpl(items_loaded);
+    adapter = new MyAdapter(this.getApplicationContext(), rv, (TodoItemsHolder)temp);
     rv.setAdapter(adapter);
+
   }
 
-
-  /**
-   *
-   * @param context
-   * @param object
-   * @param filename
-   */
-  public static void witeObjectToFile(Context context, Object object, String filename) {
-
-    ObjectOutputStream objectOut = null;
-    try {
-
-      FileOutputStream fileOut = context.openFileOutput(filename, Activity.MODE_PRIVATE);
-      objectOut = new ObjectOutputStream(fileOut);
-      objectOut.writeObject(object);
-      fileOut.getFD().sync();
-
-    } catch (IOException e) {
-      e.printStackTrace();
-    } finally {
-      if (objectOut != null) {
-        try {
-          objectOut.close();
-        } catch (IOException e) {
-          // do nowt
-        }
-      }
-    }
-  }
-
-
-  /**
-   *
-   * @param context
-   * @param filename
-   * @return
-   */
-  public static Object readObjectFromFile(Context context, String filename) {
-
-    ObjectInputStream objectIn = null;
-    Object object = null;
-    try {
-
-      FileInputStream fileIn = context.getApplicationContext().openFileInput(filename);
-      objectIn = new ObjectInputStream(fileIn);
-      object = objectIn.readObject();
-
-    } catch (FileNotFoundException e) {
-      // Do nothing
-    } catch (IOException | ClassNotFoundException e) {
-      e.printStackTrace();
-    } finally {
-      if (objectIn != null) {
-        try {
-          objectIn.close();
-        } catch (IOException e) {
-          // do nowt
-        }
-      }
-    }
-
-    return object;
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+    // remove ALL broadcast receivers we registered earlier in onCreate().
+    //  to remove a registered receiver, call method `this.unregisterReceiver(<receiver-to-remove>)`
+    this.unregisterReceiver(broadcastReceiverForchange);
   }
 }

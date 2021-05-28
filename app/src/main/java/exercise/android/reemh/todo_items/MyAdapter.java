@@ -1,20 +1,24 @@
 package exercise.android.reemh.todo_items;
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.Date;
 import java.util.List;
 
 public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
-
-    TodoItemsHolderImpl holder_TodoItems;
+    TaskStore_Application tasks_app;
+//    TodoItemsHolderImpl holder_TodoItems;
     RecyclerView adapter_owner_RecyclerView;
 
     // wrapper class that shows individual view
@@ -41,22 +45,32 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
      * Initialize the dataset of the Adapter.
      */
     // empty constructor
-    public MyAdapter(RecyclerView rv){
-        this.holder_TodoItems = new TodoItemsHolderImpl();
+    public MyAdapter(Context context, RecyclerView rv){
         adapter_owner_RecyclerView = rv;
+//        this.holder_TodoItems = new TodoItemsHolderImpl();
+//        this.tasks_app = new TaskStore_Application();
+        this.tasks_app = (TaskStore_Application) context;
+        this.tasks_app.set_tasks_info(new TodoItemsHolderImpl());
     }
 
     // constructor with TodoItemsHolderImpl
-    public MyAdapter(RecyclerView rv, TodoItemsHolder holder){
+    public MyAdapter(Context context, RecyclerView rv, TodoItemsHolder holder){
         adapter_owner_RecyclerView = rv;
-        this.holder_TodoItems = (TodoItemsHolderImpl) holder;
+//        this.holder_TodoItems = (TodoItemsHolderImpl) holder;
+//        this.tasks_app = new TaskStore_Application();
+        this.tasks_app = (TaskStore_Application) context;
+        this.tasks_app.set_tasks_info((TodoItemsHolderImpl) holder);
 
     }
 
     // constructor with List<TodoItem>
-    public MyAdapter(RecyclerView rv, List<TodoItem> TodoItems){
+    public MyAdapter(Context context, RecyclerView rv, List<TodoItem> TodoItems){
         adapter_owner_RecyclerView = rv;
-        this.holder_TodoItems = new TodoItemsHolderImpl(TodoItems);
+//        this.holder_TodoItems = new TodoItemsHolderImpl(TodoItems);
+//        this.tasks_app = new TaskStore_Application();
+        this.tasks_app = (TaskStore_Application) context;
+        this.tasks_app.set_tasks_info(new TodoItemsHolderImpl(TodoItems));
+
     }
 
     @NonNull
@@ -72,7 +86,8 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull MyAdapter.ViewHolder holder, int position) {
 
-        List<TodoItem> items = holder_TodoItems.getCurrentItems();
+//        List<TodoItem> items = holder_TodoItems.getCurrentItems();
+        List<TodoItem> items = tasks_app.tasks_info().tasks_list.getCurrentItems();
         TodoItem item = items.get(position);
         CheckBox holder_status = holder.getStatus();
         TextView holder_description = holder.getDescription();
@@ -96,18 +111,17 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
         holder_status.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //todo: should the original item be recycled?
                 if(item.is_done()) {
                     // this item was done, should be moved to in-progress
-                    holder_TodoItems.deleteItem(item);
-                    holder_TodoItems.addNewInProgressItem(item.description, item.creation_TimeStamp);
+                    tasks_app.tasks_info().deleteItem(item);
+                    tasks_app.tasks_info().addNewInProgressItem(item.description, item.creation_TimeStamp, new Date());
                 }
                 else {
-                    holder_TodoItems.deleteItem(item);
-                    holder_TodoItems.addNewDoneItem(item.description, item.creation_TimeStamp); // add a new item with the same description
+                    tasks_app.tasks_info().deleteItem(item);
+                    tasks_app.tasks_info().addNewDoneItem(item.description, item.creation_TimeStamp, new Date());
                 }
 
-                MyAdapter.this.notifyDataSetChanged();
+                MyAdapter.this.notify_adapter_data_changed();
             }
         });
 
@@ -116,9 +130,17 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
             @Override
             public boolean onLongClick(View v) {
                 // remove
-                holder_TodoItems.deleteItem(item);
-                MyAdapter.this.notifyDataSetChanged();
+                tasks_app.tasks_info().deleteItem(item);
+//                holder_TodoItems.deleteItem(item);
+                MyAdapter.this.notify_adapter_data_changed();
                 return false;
+            }
+        });
+
+        holder_description.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                open_editing_for_view(item);
             }
         });
 
@@ -126,7 +148,27 @@ public class MyAdapter extends RecyclerView.Adapter<MyAdapter.ViewHolder> {
 
     @Override
     public int getItemCount() {
-        return holder_TodoItems.getCurrentItems().size();
+        return tasks_app.tasks_info().getCurrentItems().size();
+//        return holder_TodoItems.getCurrentItems().size();
+    }
+
+
+    private void open_editing_for_view(TodoItem item){
+        Intent intent = new Intent(this.adapter_owner_RecyclerView.getContext(), EditingActivity.class);
+        //send view data along with intent
+        intent.putExtra("task_text", item.description);
+        intent.putExtra("status", item.status);
+        intent.putExtra("creation_date", item.creation_TimeStamp.getTime());
+        intent.putExtra("last_modified_date", item.last_modified.getTime());
+        tasks_app.item_being_edited = item;
+        this.adapter_owner_RecyclerView.getContext().startActivity(intent);
+    }
+
+    public void notify_adapter_data_changed(){
+        //todo: save data
+
+        // notify adapter that data has changed
+        MyAdapter.this.notifyDataSetChanged();
     }
 
 }

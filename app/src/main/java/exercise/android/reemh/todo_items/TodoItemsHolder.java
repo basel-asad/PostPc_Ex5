@@ -13,26 +13,36 @@ public interface TodoItemsHolder {
   /**
    * Creates a new TodoItem and adds it to the list, with the @param description and status=IN-PROGRESS
    * Subsequent calls to [getCurrentItems()] should have this new TodoItem in the list
+   * @return
    */
-  void addNewInProgressItem(String description);
+  TodoItem addNewInProgressItem(String description);
 
-  /** a new 'InProgress' constructor that also sets the timestamo of a TodoItem*/
-  void addNewInProgressItem(String description, Date creation_date);
+  /** a new 'InProgress' constructor that also sets the timestamo of a TodoItem
+   * @return*/
+  TodoItem addNewInProgressItem(String description, Date creation_date);
+
+  TodoItem addNewInProgressItem(String description, Date creation_date, Date last_modified);
 
   /**
    * Creates a new TodoItem and adds it to the end of the list, with the @param description and status=DONE
    * Subsequent calls to [getCurrentItems()] should have this new TodoItem in the list (end)
+   * @return
    */
-  void addNewDoneItem(String description);
+  TodoItem addNewDoneItem(String description);
 
-  /** a new 'DONE' constructor that also sets the timestamo of a TodoItem*/
-  void addNewDoneItem(String description, Date creation_date);
+  /** a new 'DONE' constructor that also sets the timestamo of a TodoItem
+   * @return*/
+  TodoItem addNewDoneItem(String description, Date creation_date);
 
 
-  void markItemDone(TodoItem item);
+    TodoItem addNewDoneItem(String description, Date creation_date, Date last_modified);
 
-  void markItemInProgress(TodoItem item);
+    TodoItem markItemDone(TodoItem item);
+
+  TodoItem markItemInProgress(TodoItem item);
 
   /** delete the @param item */
   void deleteItem(TodoItem item);
+
+    void setText(TodoItem item, String new_text);
 }
